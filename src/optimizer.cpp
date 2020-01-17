@@ -1,5 +1,4 @@
 #include <ceres/ceres.h>
-#include <ceres/rotation.h>
 #include <Eigen/Geometry>
 
 #include <glog/logging.h>
@@ -7,37 +6,7 @@
 #include "ocam_functions.hpp"
 #include "reprojection_error.hpp"
 #include "calibration.hpp"
-
-
-const double SQUARE_SIZE = 0.159; // size in m
-// corners
-const cv::Mat OBJ_PTS = (cv::Mat_<double>(4, 3) <<
-	0, 0, 0,
-	SQUARE_SIZE, 0, 0,
-	SQUARE_SIZE, SQUARE_SIZE, 0,
-	0, SQUARE_SIZE, 0);
-
-class Optimizer
-{
-public:
-	Optimizer(const std::string data_folder, const cv::Mat& obj_pts, const std::string origin_tag, const int camera_num, const CameraType cam_type);
-	void optimize();
-	void saveResults();
-private:
-	const std::string DATAFOLDER;
-	const std::string ORIGIN_TAG;
-	const int CAM_NUM;
-	const CameraType cam_type_;
-
-	std::map<std::string, std::array<double, 3>> tag_parameters_;
-	std::map<std::string, std::array<double, 6>> camera_parameters_;
-
-	Eigen::Matrix<double, 3, 4> obj_pts_eigen_;
-	std::map<std::string, cv::Mat> observations_; // key:img0tag0
-	std::map<std::string, ocam_model> ocam_models_;
-public:
-	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-};
+#include "optimizer.hpp"
 
 Optimizer::Optimizer(const std::string data_folder, const cv::Mat& obj_pts, const std::string origin_tag, const int camera_num, const CameraType cam_type)
 	:DATAFOLDER(data_folder), ORIGIN_TAG(origin_tag), CAM_NUM(camera_num), cam_type_(cam_type)
@@ -49,7 +18,7 @@ Optimizer::Optimizer(const std::string data_folder, const cv::Mat& obj_pts, cons
 	for (int i = 0; i < 3; ++i) {
 		for (int j = 0; j < 4; j++)
 		{
-			obj_pts_eigen_(i, j) = OBJ_PTS.at<double>(j, i);
+			obj_pts_eigen_(i, j) = obj_pts.at<double>(j, i);
 		}
 	}
 	//std::cout << obj_pts_eigen_ << std::endl;
@@ -100,6 +69,7 @@ Optimizer::Optimizer(const std::string data_folder, const cv::Mat& obj_pts, cons
 		fs_pts[key] >> pts;
 		observations_[key] = pts;
 	}
+
 }
 
 
@@ -143,13 +113,14 @@ void Optimizer::optimize()
 
 	ceres::Solver::Options options;
 	options.linear_solver_type = ceres::DENSE_SCHUR;
-	options.minimizer_progress_to_stdout = true;
+	options.minimizer_progress_to_stdout = false;
 
 	ceres::Solver::Summary summary;
+	std::cout << "Start optimization" << std::endl;
 	ceres::Solve(options, &problem, &summary);
 	std::cout << "Finished!" << std::endl;
-	std::cout << summary.FullReport() << "\n";
-	//std::cout << summary.BriefReport() << "\n";
+	//std::cout << summary.FullReport() << "\n";
+	std::cout << summary.BriefReport() << "\n";
 }
 
 void Optimizer::saveResults()
@@ -185,21 +156,30 @@ void Optimizer::saveResults()
 	return;
 }
 
-int main(int argc, char** argv) {
-
-	google::InitGoogleLogging(argv[0]);
-
-	// GLOBAL
-	const std::string DATAFOLDER = "../data";
-	const std::string ORIGIN_TAG = "tag0";
-
-	const int CAM_NUM = 4;
-	//const CameraType cam_type = CameraType::Perspective; // CameraType::Fisheye; //
-	const CameraType cam_type = CameraType::Fisheye; // CameraType::Fisheye; //
-
-	Optimizer optimizer(DATAFOLDER, OBJ_PTS, ORIGIN_TAG, CAM_NUM, cam_type);
-	optimizer.optimize();
-	optimizer.saveResults();
-	return 0;
-
-}
+//int main(int argc, char** argv) {
+//
+//
+//	const double SQUARE_SIZE = 0.159; // size in m
+//	// corners
+//	const cv::Mat OBJ_PTS = (cv::Mat_<double>(4, 3) <<
+//		0, 0, 0,
+//		SQUARE_SIZE, 0, 0,
+//		SQUARE_SIZE, SQUARE_SIZE, 0,
+//		0, SQUARE_SIZE, 0);
+//
+//	google::InitGoogleLogging(argv[0]);
+//
+//	// GLOBAL
+//	const std::string DATAFOLDER = "../data";
+//	const std::string ORIGIN_TAG = "tag0";
+//
+//	const int CAM_NUM = 4;
+//	//const CameraType cam_type = CameraType::Perspective; // CameraType::Fisheye; //
+//	const CameraType cam_type = CameraType::Fisheye; // CameraType::Fisheye; //
+//
+//	Optimizer optimizer(DATAFOLDER, OBJ_PTS, ORIGIN_TAG, CAM_NUM, cam_type);
+//	optimizer.optimize();
+//	optimizer.saveResults();
+//	return 0;
+//
+//}

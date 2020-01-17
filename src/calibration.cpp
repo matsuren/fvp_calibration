@@ -9,7 +9,12 @@
 #include "calibration.hpp"
 #include "detect_tag.hpp"
 #include "undistort_points.hpp"
-//#include "reprojection_error.hpp"
+
+
+#include "angle_adjuster.hpp"
+
+//
+#include "optimizer.hpp"
 
 // GLOBAL
 const std::string DATAFOLDER = "../data";
@@ -184,12 +189,12 @@ int calculatePoses() {
 			fs_out << key << BFSEstimatePoses(key, poses);
 		}
 	}
-
+	std::cout << "Done estimating to initial camera poses" << std::endl;
 	return 0;
 }
 
 /////////////////////////////////////////////////////////////////////////////
-int refinePoses() {
+int refinePosesInitialParams() {
 	/////////////////////////////////////////////
 	// estimate initial parameter for refinement
 
@@ -272,11 +277,29 @@ int refinePoses() {
 	return 0;
 }
 
-void adjustAngle() {
+void optimization() {
+	// Optimization by Ceres solver
+	//google::InitGoogleLogging(argv[0]);
+	Optimizer optimizer(DATAFOLDER, OBJ_PTS, ORIGIN_TAG, CAM_NUM, cam_type);
+	optimizer.optimize();
+	optimizer.saveResults();
+}
 
+void adjustAngle() {
+	// Adjust angle
+	AngleAdjuster adjuster(DATAFOLDER, CAM_NUM);
+	cv::Mat out;
+	adjuster.generateBEV(out);
+	adjuster.rotate(out);
+	adjuster.savePoses();
+	adjuster.generateBEV(out);
+	cv::imshow("final image", out);
+	cv::waitKey();
+	cv::destroyAllWindows();
 }
 
 int main(int argc, char *argv[]) {
+
 	try {
 		// detect Apriltag corner
 		std::cout << "---detectCorner---" << std::endl;
@@ -288,7 +311,8 @@ int main(int argc, char *argv[]) {
 
 		// refine camera poses by LM method
 		std::cout << "---refinePoses---" << std::endl;
-		refinePoses();
+		refinePosesInitialParams();
+		optimization();
 
 		// adjust angle
 		std::cout << "---adjustAngle---" << std::endl;

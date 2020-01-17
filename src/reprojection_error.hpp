@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ceres/ceres.h>
+#include <ceres/rotation.h>
 #include <Eigen/Core>
 
 
