@@ -10,4 +10,4 @@ Please use [vcpkg](https://github.com/microsoft/vcpkg). For x64-windows,
 .\vcpkg install ceres[suitesparse,cxsparse]:x64-windows
 ```
 
-Under construction
+Document will be available soon!
